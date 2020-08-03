@@ -5,11 +5,25 @@ import (
 )
 
 func main(){
-	// p.Tee()
-	// p.Bridge()
-	// p.OrDone()
-	// p.ContextWithCancel()
-	// p.ContextWithTimeouts()
+	// Lexical Confinement
+	// p.LexicalConfinement()
+
+	// Preventing Goroutines Leak
+	// p.PreventingGoroutinesLeak()
+
+	// or-done channel 
+	// p.OrDoneChannel()
+
+	// tee-channel
+	// p.TeeChannel()
+
+	// bridge-channel
+	// p.BridgeChannel()
+
+	// context
+	// p.Context()
+
+	// pipelines
 	// p.Pipelines()
-	p.FanOutFanIn()
+	// p.Generators()
 }

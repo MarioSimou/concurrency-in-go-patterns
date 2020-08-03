@@ -2,87 +2,80 @@ package patterns
 
 import (
 	"context"
-	"fmt"
+	"runtime"
 	"time"
+	"fmt"
 )
 
 func Pipelines(){
-	// var repeat = func(ctx context.Context, values ...interface{}) <-chan interface{} {
-	// 	var stream = make(chan interface{})
+	var pipelineStage = func(ctx context.Context, stream <-chan interface{}) <-chan interface{} {
+		var newStream = make(chan interface{})
 
-	// 	go func(){
-	// 		defer close(stream)
-
-	// 		for {
-	// 			for _, v := range values {
-	// 				select {
-	// 				case <- ctx.Done():
-	// 					return
-	// 				case stream <- v:
-	// 				}
-	// 			}
-	// 		}
-	// 	}()
-
-	// 	return stream
-	// } 
-
-	var take = func(ctx context.Context, input <-chan interface{}, n int) <- chan interface{} {
-		var stream = make(chan interface{})
-
-		go func(){
-			defer close(stream)
-
-			for i :=0; i < n; i++ {
+		go func(){		
+			for {
 				select {
-				case <- ctx.Done():
+				case <-ctx.Done():
 					return
-				case stream <- <-input: 
-				} 
-			}
-		}()
+				case v, ok := <- stream:
+					if !ok {
+						return
+					}
 
-		return stream
-	}
-
-	var repeatFn = func(ctx context.Context, fn func() interface{}, n int) <-chan interface{} {
-		var stream = make(chan interface{})
-
-		go func(){
-			defer close(stream)
-
-			for i:=0; i < n; i++ {
-				select {
-				case <- ctx.Done():
-					return
-				case stream <- fn():
+					time.Sleep(1 * time.Second) // simulate work
+					newStream <- v
 				}
 			}
 		}()
 
+		return newStream
+	}
+	var fanout = func(ctx context.Context, channels ...<-chan interface{}) chan interface{}{
+		var stream = make(chan interface{})
+
+		for _, channel := range channels {
+			go func(ctx context.Context, channel <-chan interface{}){
+				for {
+					select {
+					case <-ctx.Done():
+						return
+					case v, ok := <- channel:
+						if !ok {
+							return
+						}
+	
+						stream <- v
+					}
+				}
+			}(ctx, channel)
+		}
+
 		return stream
 	}
 
-	var ctx, cancelFn = context.WithCancel(context.Background())
-	// var stream = repeat(ctx, 1, 2, 3, 4, 5)
-	var fn = func() interface{} { return 1 }
-	var stream = repeatFn(ctx, fn, 10)
-	var takeStream = take(ctx, stream, 5)
-	var timer = time.After(time.Second * 10)
+	var ctx, _ = context.WithTimeout(context.Background(), time.Second * 5)
+	var stream = repeat(ctx,1,2,3,4,5)
+
+	var nCPUs = runtime.NumCPU()
+	var channels = make([]<-chan interface{}, nCPUs)
+
+	// fan-in = gets a stream and runs it across multiple goroutines
+	for i:=0; i < nCPUs; i++ {
+		channels[i] = pipelineStage(ctx, stream)
+	}
+
+	// fan-out = consumes the data coming from the goroutines and multiplexes it to a single channel
+	var fanOutStream = fanout(ctx, channels...)
 
 	defer fmt.Printf("Terminating...\n")
-	defer cancelFn()
+	defer time.Sleep(1 * time.Second)
+	defer close(fanOutStream)
 
 	for {
 		select {
-		case <-timer:
-			return
-		case v, ok := <- takeStream:
-			if !ok {
-				return
-			}
-
+		case v := <-fanOutStream:
 			fmt.Printf("Value: %v\n", v)
+		case <-ctx.Done():
+			return
 		}
 	}
 }

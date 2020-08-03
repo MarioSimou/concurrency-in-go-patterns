@@ -1,19 +1,10 @@
-# Design Patters in Go - Concurrency 
+### Design Patterns in Golang - Concurrecny
 
-### Description
-
-This repository includes some common design patterns that have evolved and implemented in Go. Most of the patterns are taken from [Concurrency in Go](https://books.google.co.uk/books/about/Concurrency_in_Go.html?id=V3EtDwAAQBAJ&printsec=frontcover&source=kp_read_button&redir_esc=y#v=onepage&q&f=false)
-
-#### Design Patterns:
-
-- For-select loop
-- Lexical confinement
-- Preventing Goroutine Leaks
-- or-done channel
-- Error Handling
-- Pipelines
-  - Generators
-  - Fan-out, fan-in
-- Tee-channel
-- Bridge-channel
-- The context package
+1) Lexical Confinement
+2) For-select loop
+3) Preventing Goroutines leak
+4) Tee-channel
+5) Bridge-channel
+6) or-done channel
+7) Context
+8) Pipelines
